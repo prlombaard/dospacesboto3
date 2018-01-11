@@ -22,19 +22,26 @@ s_find_file_path = 'new-folder/polarbear_1920x1080.jpeg'
 i_local_file_size = os.path.getsize(s_local_file_path)
 
 # DONE: get from the real environment
-if not os.environ.get('ENV_DO_ACCESS_KEY_ID'):
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')  # old key or 'H3PTDVXALKYXB4OU7OMA'
+# AWS_ACCESS_KEY_ID = '42CCNXCE2HV4RDJMBCID'
+if not AWS_ACCESS_KEY_ID:
     # TODO: raise warning on logger level
-    print('WARNING!!!, could not retrieve ENV_DO_ACCESS_KEY_ID from environment using hard coded value')
-ENV_DO_ACCESS_KEY_ID = os.environ.get('ENV_DO_ACCESS_KEY_ID') or 'H3PTDVXALKYXB4OU7OMA'
+    print('WARNING!!!, could not retrieve AWS_ACCESS_KEY_ID from environment using hard coded value')
 
-if not os.environ.get('ENV_DO_SECRET_ACCESS_KEY'):
+AWS_SECRET_ACCESS_KEY = os.environ.get(
+    'AWS_SECRET_ACCESS_KEY')  # old key or '2Z+YJ+qEhnL1rKakK47nVPFHPYzN93V10+mb7joFerk'
+# AWS_SECRET_ACCESS_KEY = '66FCtiNVcIJgDV4jpzx8dYZCYUaQDbX8itNCyNX/niM'
+if not AWS_SECRET_ACCESS_KEY:
     # TODO: raise warning on logger level
-    print('WARNING!!!, could not retrieve ENV_DO_SECRET_ACCESS_KEY from environment using hard coded value')
-ENV_DO_SECRET_ACCESS_KEY = os.environ.get('ENV_DO_SECRET_ACCESS_KEY') or '2Z+YJ+qEhnL1rKakK47nVPFHPYzN93V10+mb7joFerk'
+    print('WARNING!!!, could not retrieve AWS_SECRET_ACCESS_KEY from environment using hard coded value')
+
+
+# print(ENV_DO_ACCESS_KEY_ID)
+# print(ENV_DO_SECRET_ACCESS_KEY)
 
 
 def digital_ocean_client_init(region_name='nyc3', endpoint_url='https://nyc3.digitaloceanspaces.com',
-                              aws_access_key_id=ENV_DO_ACCESS_KEY_ID, aws_secret_access_key=ENV_DO_SECRET_ACCESS_KEY):
+                              aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY):
     session = boto3.session.Session()
     client = session.client('s3',
                             region_name=region_name,
@@ -44,12 +51,12 @@ def digital_ocean_client_init(region_name='nyc3', endpoint_url='https://nyc3.dig
     return client
 
 
-def get_list_of_files_using_pagination(client, spaces_name, folderPrefix=''):
+def get_list_of_files_using_pagination(client, spaces_name, folder_prefix=''):
     # TODO: use pagination S3 returns only the first 1000 objects per page.
     # Using example from https://adamj.eu/tech/2018/01/09/using-boto3-think-pagination/
     paginator = client.get_paginator('list_objects')
     file_list = []
-    pages = paginator.paginate(Bucket=spaces_name, Prefix=folderPrefix)
+    pages = paginator.paginate(Bucket=spaces_name, Prefix=folder_prefix)
     for page in pages:
         for obj in page['Contents']:
             # print(obj)
@@ -57,11 +64,12 @@ def get_list_of_files_using_pagination(client, spaces_name, folderPrefix=''):
     return file_list
 
 
-def get_list_of_files(client, spaces_name, folderPrefix=''):
+def get_list_of_files(client, spaces_name, folder_prefix=''):
     # resp = client.list_objects(Bucket='s_spaces_name', Prefix='foo/')
     # resp = client.list_objects(Bucket=s_spaces_name, Prefix='Pictures')
     file_list = []
-    resp = client.list_objects(Bucket=s_spaces_name, Prefix=folderPrefix)
+    # BUG: Here is a bug!! Should be Bucket=spaces_name
+    resp = client.list_objects(Bucket=spaces_name, Prefix=folder_prefix)
     for obj in resp['Contents']:
         file_list.append(obj['Key'])
         # print(obj['Key'])
@@ -109,16 +117,18 @@ def get_remote_file_exists(client, spaces_name, path_for_remote_file):
     return bool(get_remote_file_size(client, spaces_name, path_for_remote_file))
 
 
+print('Initializing Digital Ocean Spaces Client')
 client_do = digital_ocean_client_init()
+print('DO client initialized')
 
 # print("Here is a list of the files contained in the spaces")
-# list_of_files = get_list_of_files(client_do, s_spaces_name, folderPrefix='Pictures')
+list_of_files = get_list_of_files(client_do, s_spaces_name, folder_prefix='Pictures')
 # TODO: print the file list better
 # print(list_of_files)
 # cpprint(list_of_files)
 
 print('Get list of files using pagination')
-list_of_files_pagination = get_list_of_files_using_pagination(client_do, s_spaces_name, folderPrefix='new-folder')
+list_of_files_pagination = get_list_of_files_using_pagination(client_do, s_spaces_name, folder_prefix='new-folder')
 # print(list_of_files)
 cpprint(list_of_files_pagination)
 
@@ -152,7 +162,7 @@ i_after_download_file_size = os.path.getsize(s_local_file_name
                                              )
 print(f'Local file size  after download {i_after_download_file_size}')
 
-print(f'Do notexists.jpeg exist?          : {"yes" if not_exist_size else "no"}')
+print(f'Do not exists.jpeg exist?          : {"yes" if not_exist_size else "no"}')
 if not_exist_size:
     print(f'Existing size of notexists.jpeg : {not_exist_size}')
 
